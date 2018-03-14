@@ -1,4 +1,3 @@
-import hashlib
 from urllib.parse import urlparse
 import requests
 from Block import Block
@@ -15,7 +14,7 @@ class BlockChain:
         self.nodes = set()
 
         # Création du block initial
-        block = Block(p_index=1, p_transactions=self.pending_transactions, p_previous_hash=1, p_proof=100)
+        block = Block(p_index=1, p_transactions=[], p_previous_hash=None)
         self.block_chain.append(block)
 
     @property
@@ -23,17 +22,21 @@ class BlockChain:
         return self.block_chain[-1]
 
     @property
+    def last_index(self):
+        return len(self.block_chain)
+
+    @property
     def json_chain(self):
         return [block.jsonify() for block in self.block_chain]
 
-    """
-    Soumet une nouvelle transaction à la chaine
-    :param sender: <str> L'adresse de l'expediteur
-    :param recipient: <str> L'adresse du bénéficiaire
-    :param amount: <int> Montant
-    :return: <int> L'index du bloc qui va porter la transaction
-    """
     def new_transaction(self, p_sender, p_recipient, p_amount):
+        """
+        Soumet une nouvelle transaction à la chaine
+        :param p_sender: <str> L'adresse de l'expediteur
+        :param p_recipient: <str> L'adresse du bénéficiaire
+        :param p_amount: <int> Montant
+        :return: <int> L'index du bloc qui va porter la transaction
+        """
         self.pending_transactions.append({
             'sender': p_sender,
             'recipient': p_recipient,
@@ -41,76 +44,74 @@ class BlockChain:
         })
         return self.last_block.index + 1
 
-    def new_block(self, p_previous_hash, p_proof=100):
-        block = Block(p_index=len(self.block_chain) + 1, p_transactions=self.pending_transactions,
-                      p_previous_hash=p_previous_hash, p_proof=p_proof)
+    def add_block(self):
+        """
+        Ajoute un bloc à la chaine, contenant les transactions en attente
+        :return: le bloc ajouté
+        """
+        block = Block(p_index=self.last_index + 1, p_transactions=self.pending_transactions,
+                      p_previous_hash=self.last_block.hash())
+        block.miner(self.DIFFICULTE)
+
         self.block_chain.append(block)
         self.pending_transactions = []
-        return self.last_block
+        return block
 
-    """
-    Preuve de travail :
-    - Trouver un nombre p' tel que hash(pp') commence par 4 zéros consécutifs.
-    - p est la preuve précédente de la chaine et p' est la nouvelle preuve
-    :param last_proof: <int> dernière preuve de la chaine
-    :return: <int> la nouvelle preuve vérifiant hash(pp') commence par 4 zéros
-    """
-    def proof_of_work(self, p_last_proof):
-        proof = 0
-        while self.valid_proof(p_last_proof, proof) is False:
-            proof += 1
-        return proof
-
-    """
-    Valide la preuve : est-ce que hash(last_proof, proof) commence par 4 zéros ?
-    :param last_proof: <int> Preuve précédente dans la chaine
-    :param proof: <int> Preuve courante
-    :return: <bool> True si la preuve est correcte, False sinon
-    """
-    @staticmethod
-    def valid_proof(p_last_proof, p_proof):
-        guess = f'{p_last_proof}{p_proof}'.encode()
-        guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:BlockChain.DIFFICULTE] == "0" * BlockChain.DIFFICULTE
-
-    """
-    Ajoute un noeud à la liste des noeuds connus
-    :param address: <str> Address d'un noeud. Eg. 'http://192.168.0.5:5000'
-    :return: None
-    """
     def register_node(self, p_address):
+        """
+        Ajoute un noeud à la liste des noeuds connus
+        :param p_address: <str> Address d'un noeud. Eg. 'http://192.168.0.5:5000'
+        :return: None
+        """
         parsed_url = urlparse(p_address)
         self.nodes.add(parsed_url.netloc)
 
-    """
-    Vérifie la validité d'une blockchain complète
-    :param chain: <list> Une blockchaine
-    :return: <bool> True si chain est valide, False sinon
-    """
+    @staticmethod
+    def is_firstblock_valid(p_chain):
+        first_block = p_chain[0]
+
+        if first_block.index != 1:
+            return False
+
+        if first_block.previous_hash is not None:
+            return False
+
+        return True
+
+    @staticmethod
+    def is_block_valid(p_block, p_previous_block):
+        if p_block.index != p_previous_block.index + 1:
+            return False
+
+        if p_block.previous_hash != p_previous_block.hash():
+            return False
+
+        return True
+
     @staticmethod
     def valid_chain(p_chain):
-        last_block = p_chain[0]
+        """
+        Vérifie la validité d'une blockchain complète
+        :param p_chain: <list> Une blockchaine
+        :return: <bool> True si chain est valide, False sinon
+        """
+        if not BlockChain.is_firstblock_valid(p_chain):
+            return False
+
         current_index = 1
         while current_index < len(p_chain):
             block = p_chain[current_index]
-
-            # Vérifie que le hash du block est correct
-            if block['previous_hash'] != last_block.hash():
+            last_block = p_chain[current_index - 1]
+            if not BlockChain.is_block_valid(block, last_block):
                 return False
-
-            # Vérifie que la preuve est correcte
-            if not BlockChain.valid_proof(last_block['proof'], block['proof']):
-                return False
-
-            last_block = block
             current_index += 1
         return True
 
-    """
-    Algo de consensus : remplace la chaine par la plus longue chaine valide du réseau
-    :return: <bool> True si la chaine est remplacée, False sinon
-    """
     def resolve_conflicts(self):
+        """
+        Algo de consensus : remplace la chaine par la plus longue chaine valide du réseau
+        :return: <bool> True si la chaine est remplacée, False sinon
+        """
         neighbours = self.nodes
         new_chain = None
 

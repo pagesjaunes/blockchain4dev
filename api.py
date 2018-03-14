@@ -29,28 +29,13 @@ def new_transaction():
 
 @app.route('/mine', methods=['GET'])
 def mine():
-    # Miner consiste à faire tourner l'algorithme de preuve de travail
-    # Celui-ci tourne à partir de la 'preuve' du dernier bloc de la chaine
-    last_block = blockchain.last_block
-    last_proof = last_block.proof
-    proof = blockchain.proof_of_work(last_proof)
-
-    # Ajoute la transaction "récompense" pour avoir bien miné
-    blockchain.new_transaction(
-        p_sender="0",
-        p_recipient=node_identifier,
-        p_amount=1,
-    )
-
-    # Génère le bloc à partir des transactions en attente
-    previous_hash = last_block.hash()
-    block = blockchain.new_block(p_previous_hash=previous_hash, p_proof=proof)
+    block = blockchain.add_block()
 
     response = {
         'message': "New Block Forged",
         'index': block.index,
         'transactions': block.transactions,
-        'proof': block.proof,
+        'proof': block.nonce,
         'previous_hash': block.previous_hash
     }
 
