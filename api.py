@@ -11,35 +11,22 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = BlockChain()
 
 
-@app.route('/transactions/new', methods=['POST'])
+@app.route('/transactions', methods=['POST'])
 def new_transaction():
     values = request.get_json()
 
-    # Check that the required fields are in the POST'ed data
-    required = ['sender', 'recipient', 'amount']
-    if not all(k in values for k in required):
-        return 'Missing values', 400
+    # Ajoute la transaction à la liste des transactions en attente
+    blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
 
-    # Ajoute la transaction à la liste des pending transactions
-    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
-
-    response = {'message': f'La transaction sera ajoutée au block {index}'}
+    response = {'message': 'La transaction est en attente'}
     return jsonify(response), 201
 
 
-@app.route('/mine', methods=['GET'])
-def mine():
+@app.route('/blocks', methods=['POST'])
+def new_block():
     block = blockchain.add_block()
 
-    response = {
-        'message': "New Block Forged",
-        'index': block.index,
-        'transactions': block.transactions,
-        'proof': block.nonce,
-        'previous_hash': block.previous_hash
-    }
-
-    return jsonify(response), 200
+    return block.jsonify(), 201
 
 
 @app.route('/chain', methods=['GET'])

@@ -17,18 +17,6 @@ class BlockChain:
         block = Block(p_index=1, p_transactions=[], p_previous_hash=None)
         self.block_chain.append(block)
 
-    @property
-    def last_block(self):
-        return self.block_chain[-1]
-
-    @property
-    def last_index(self):
-        return len(self.block_chain)
-
-    @property
-    def json_chain(self):
-        return [block.jsonify() for block in self.block_chain]
-
     def new_transaction(self, p_sender, p_recipient, p_amount):
         """
         Soumet une nouvelle transaction à la chaine
@@ -42,7 +30,6 @@ class BlockChain:
             'recipient': p_recipient,
             'amount': p_amount
         })
-        return self.last_block.index + 1
 
     def add_block(self):
         """
@@ -56,15 +43,6 @@ class BlockChain:
         self.block_chain.append(block)
         self.pending_transactions = []
         return block
-
-    def register_node(self, p_address):
-        """
-        Ajoute un noeud à la liste des noeuds connus
-        :param p_address: <str> Address d'un noeud. Eg. 'http://192.168.0.5:5000'
-        :return: None
-        """
-        parsed_url = urlparse(p_address)
-        self.nodes.add(parsed_url.netloc)
 
     @staticmethod
     def is_firstblock_valid(p_chain):
@@ -84,6 +62,9 @@ class BlockChain:
             return False
 
         if p_block.previous_hash != p_previous_block.hash():
+            return False
+
+        if not p_block.proof_of_work:
             return False
 
         return True
@@ -136,3 +117,26 @@ class BlockChain:
             return True
 
         return False
+
+    def register_node(self, p_address):
+        """
+        Ajoute un noeud à la liste des noeuds connus
+        :param p_address: <str> Address d'un noeud. Eg. 'http://192.168.0.5:5000'
+        :return: None
+        """
+        parsed_url = urlparse(p_address)
+        self.nodes.add(parsed_url.netloc)
+
+    @property
+    def json_chain(self):
+        return [block.jsonify() for block in self.block_chain]
+
+    @property
+    def last_block(self):
+        return self.block_chain[-1]
+
+    @property
+    def last_index(self):
+        return len(self.block_chain)
+
+

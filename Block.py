@@ -29,9 +29,8 @@ class Block:
 
     def proof_of_work(self, p_difficulte):
         """
-        Valide la preuve : est-ce que hash() commence par DIFFICULTE zéros ?
-        :param p_last_proof: <int> Preuve précédente dans la chaine
-        :param p_proof: <int> Preuve courante
+        Valide la preuve : est-ce que hash() commence par p_difficulte zéros ?
+        :param p_difficulte: <int> difficulté de la preuve
         :return: <bool> True si la preuve est correcte, False sinon
         """
         return self.hash()[:p_difficulte] == "0" * p_difficulte
@@ -39,10 +38,8 @@ class Block:
     def miner(self, p_difficulte):
         """
         Preuve de travail :
-        - Trouver un nombre p' tel que hash(pp') commence par DIFFICULTE zéros consécutifs.
-        - p est la preuve précédente de la chaine et p' est la nouvelle preuve
-        :param p_last_proof: <int> dernière preuve de la chaine
-        :return: <int> la nouvelle preuve vérifiant hash(pp') commence par 4 zéros
+        - Trouver la valeur de self.nonce pour que self.hash() commence par "p_difficulte" zéros
+        :param p_difficulte: <int> difficulté de la preuve
         """
         self.nonce = 0
         while not self.proof_of_work(p_difficulte):
