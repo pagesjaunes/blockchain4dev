@@ -28,7 +28,7 @@ curl --request GET --url http://localhost:5000/chain
 
 ```
 curl --request POST \
-  --url http://localhost:5000/transactions/new \
+  --url http://localhost:5000/transactions \
   --header 'content-type: application/json' \
   --data '{
 	"sender":"d4ee26eee15148ee92c6cd394edd974e",
@@ -40,5 +40,5 @@ curl --request POST \
 ## Mine
 
 ```
-curl --request GET --url http://localhost:5000/mine
+curl --request POST --url http://localhost:5000/blocks
 ```
